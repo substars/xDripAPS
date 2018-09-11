@@ -86,7 +86,7 @@ If using xDrip+ you also need to navigate to Settings > Cloud Upload > MongoDB a
 
 5. Add cron entry to start the microservice at startup - 
   e.g. - 
-  `@reboot         python /home/root/.xDripAPS/xDripAPS.py`
+  `@reboot         python /root/.xDripAPS/xDripAPS.py > /var/log/openaps/xdripaps.log 2>&1`
 
 6. Cofigure the xDrip Android app -
    ```

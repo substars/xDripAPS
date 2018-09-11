@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sqlite3
 from flask import Flask, request
 from flask_restful import Resource, Api
@@ -31,6 +32,14 @@ def create_schema():
     conn.commit() # Required?
     conn.close()
 
+def is_valid_secret_or_token(request):
+    env_secret = os.environ['API_SECRET']
+    if re.match(r'^token=', env_secret):
+        # it's a token, strip the special syntax
+        env_secret = re.sub(r'^token=', '', env_secret)
+    # otherwise, it's a regular API secret
+    return request.authorization is not None and env_secret==request.authorization["username"]
+
 def startup_checks():
     # Does .db file exist?
     if os.path.isfile(DB_FILE):
@@ -53,6 +62,7 @@ def startup_checks():
             create_schema()
     else:
         # Database doesn't exist, so create it
+        print "database " + DB_FILE + " doesn't exist, creating..."
         create_schema()
 
 class Entries(Resource):
@@ -103,15 +113,8 @@ class Entries(Resource):
 
     def post(self):
 
-        # Get hashed API secret from request
-        request_secret_hashed = request.headers['Api_Secret']
-        print 'request_secret_hashed : ' + request_secret_hashed
-
-        # Get API_SECRET environment variable
-        env_secret_hashed = os.environ['API_SECRET']
-
         # Authentication check
-        if request_secret_hashed != env_secret_hashed:
+        if not is_valid_secret_or_token(request):
             print 'Authentication failure!'
             print 'API Secret passed in request does not match API_SECRET environment variable'
             return 'Authentication failed!', 401
@@ -159,15 +162,7 @@ class Entries(Resource):
 
 class Test(Resource):
     def get(self):
-        # Get hashed API secret from request
-        request_secret_hashed = request.headers['Api_Secret']
-        print 'request_secret_hashed : ' + request_secret_hashed
-
-        # Get API_SECRET environment variable
-        env_secret_hashed = os.environ['API_SECRET']
-
-        # Authentication check
-        if request_secret_hashed != env_secret_hashed:
+        if not is_valid_secret_or_token(request):
             print 'Authentication failure!'
             print 'API Secret passed in request does not match API_SECRET environment variable'
             return 'Authentication failed!', 401
